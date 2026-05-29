@@ -176,7 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    donationForm.addEventListener('submit', (e) => {
+    donationForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
       let valid = true;
       clearErrors(donationForm);
 
@@ -185,7 +186,34 @@ document.addEventListener('DOMContentLoaded', () => {
       if (phoneField.value.trim() && !isValidPhone(phoneField.value)) { showError(phoneField); valid = false; }
       if (!amountField.value || parseInt(amountField.value) < 1) { showError(amountField); valid = false; }
 
-      if (!valid) e.preventDefault();
+      if (!valid) return;
+
+      const submitBtn = donationForm.querySelector('[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Processing…';
+
+      try {
+        const formData = new FormData(donationForm);
+        const payload = Object.fromEntries(formData.entries());
+        const res = await fetch('/api/donate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          window.location.href = 'thankyou.html';
+        } else {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error || 'Something went wrong. Please try again.');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '❤️ Complete Donation';
+        }
+      } catch {
+        alert('Network error. Please check your connection and try again.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '❤️ Complete Donation';
+      }
     });
   }
 
